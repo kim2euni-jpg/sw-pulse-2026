@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>스위니토드 온라인 반응 트래커</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="theme.css">
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+<style>html,body{margin:0;} body{background:#e9e5e0;} .dash-skeleton{} .sw-updated{text-align:center;font-size:12px;color:#6b6461;margin:0;}</style>
+</head>
+<body>
+<div id="dash-root">
+<script src="data.js"></script>
+<script>
+window.dash = (function () {
+  const DATA = window.__DATA__ || {};
+  const calcs = {}; const subs = [];
+  const defaults = { day: 'all', actor: null, topic: null, src: 'all' };
+  let params = Object.assign({}, defaults);
+  function data(id) {
+    if (DATA[id]) return { status: 'ok', data: DATA[id], columns: Object.keys(DATA[id][0] || {}), meta: [] };
+    const c = calcs[id];
+    if (c) { if (!c.v) c.v = c.fn(...c.inputs.map((i) => data(i).data)); return { status: 'ok', data: c.v, meta: [] }; }
+    return { status: 'missing', data: [], meta: [] };
+  }
+  const run = () => subs.forEach((f) => { try { f(); } catch (e) { console.error(e); } });
+  let t; window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(run, 150); });
+  return {
+    data, calc: (id, o) => { calcs[id] = o; },
+    onData: (fn) => { subs.push(fn); fn(); },
+    params: () => Object.assign({}, params),
+    setParams: (p) => { Object.assign(params, p); run(); },
+    resetParams: () => { params = Object.assign({}, defaults); run(); },
+    setLink() {}, loader() {}, refresh() {}, colors: []
+  };
+})();
+</script>
+<style>
+/* Layout: dark key-visual header band, then white reading cards on the poster's concrete ground */
+#dash-root { --dash-gutter: 0; }
+.sw {
+  --sw-red: #a3161d; --sw-red-deep: #7c0f14; --sw-ink: #161314; --sw-sub: #6b6461; --sw-line: #e2ddd8;
+  --sw-mute: #c9c2bc; --sw-paper: #ffffff; --sw-night: #110e0f;
+  --sw-display: 'Pretendard Variable', 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  --sw-eyebrow: 'Pretendard Variable', 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  --sw-body: 'Pretendard Variable', 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  color-scheme: light; color: var(--sw-ink); font-family: var(--sw-body); font-size: 15px;
+  display: flex; flex-direction: column; min-height: 100%;
+  word-break: keep-all; overflow-wrap: break-word;
+}
+.sw p, .sw li { text-wrap: pretty; }
+.sw-hero { position: relative; border-bottom: 1px solid #d8d1ca; background: radial-gradient(70% 90% at 50% 0%, rgba(110,100,95,.22), rgba(110,100,95,0) 70%); }
+.sw-hero::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: linear-gradient(90deg, rgba(163,22,29,0), var(--sw-red) 30%, var(--sw-red) 70%, rgba(163,22,29,0)); }
+.sw-hero-in { display: flex; flex-direction: column; gap: 18px; padding-block: 26px 22px; padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px)); max-width: 1180px; margin-inline: auto; width: 100%; box-sizing: border-box; }
+.sw-hero-row { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); align-items: center; gap: 8px; }
+.sw-hero-id { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; min-width: 0; }
+.sw-hero-emblem { width: clamp(64px, 9vw, 96px); aspect-ratio: 1; }
+.sw-hero-logo { width: 100%; max-width: 460px; aspect-ratio: 560 / 170; }
+.sw-title { margin: 4px 0 0; font-family: var(--sw-display); font-weight: 800; font-size: clamp(24px, 3.2vw, 34px); letter-spacing: .02em; line-height: 1.1; color: var(--sw-ink); }
+.sw-hero-art { width: 100%; max-width: 480px; aspect-ratio: 620 / 575; }
+.sw-controls { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+@media (max-width: 760px) {
+  .sw-hero-row { grid-template-columns: 1fr; justify-items: center; }
+  .sw-hero-art { max-width: 280px; order: 2; }
+}
+
+.sw-seg { display: inline-flex; border: 1px solid var(--sw-ink); border-radius: 4px; padding: 3px; gap: 2px; background: rgba(255,255,255,.85); flex-wrap: wrap; justify-content: center; }
+.sw-seg button { font: inherit; font-size: 14px; padding: 7px 18px; border: 0; border-radius: 3px; background: none; color: var(--sw-ink); cursor: pointer; }
+.sw-seg button[aria-selected="true"] { background: var(--sw-red); color: #fff; }
+.sw-seg small { opacity: .7; margin-left: 6px; font-variant-numeric: tabular-nums; }
+.sw-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.sw-hero .sw-chips { justify-content: center; }
+.sw-chip { font: inherit; font-size: 12.5px; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--sw-line); background: var(--sw-paper); color: var(--sw-ink); cursor: pointer; font-variant-numeric: tabular-nums; }
+.sw-chip[aria-pressed="true"] { background: var(--sw-ink); color: #fff; border-color: var(--sw-ink); }
+.sw-hero .sw-chip:not([aria-pressed="true"]) { background: rgba(255,255,255,.85); }
+.sw button:focus-visible, .sw input:focus-visible { outline: 2px solid var(--sw-red); outline-offset: 2px; }
+.sw-main { display: flex; flex-direction: column; gap: 18px; padding-block: 22px 8px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); max-width: 1180px; margin-inline: auto; width: 100%; box-sizing: border-box; }
+.sw-card { background: var(--sw-paper); border: 1px solid var(--sw-line); border-radius: 4px; padding: 22px 24px; display: flex; flex-direction: column; gap: 12px; min-width: 0; box-shadow: 0 1px 0 rgba(22,19,20,.04), 0 10px 24px -18px rgba(22,19,20,.35); }
+.sw-sec-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px 16px; }
+.sw-sec-title { display: flex; flex-direction: column; gap: 2px; }
+.sw-sec-title .sw-eyebrow { color: var(--sw-sub); font-size: 11px; font-weight: 600; letter-spacing: .2em; }
+.sw-block { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.sw-block > .sw-sec-head { padding-inline: 2px; }
+.sw-card h2 small, .sw-block > .sw-sec-head h2 small { font-size: 1em; font-weight: 400; color: var(--sw-ink); }
+.sw-card h2, .sw-block > .sw-sec-head h2 { margin: 0; font-family: var(--sw-display); font-weight: 800; font-size: clamp(26px, 3.2vw, 32px); color: var(--sw-red); letter-spacing: .01em; }
+.sw-note { margin: 0; color: var(--sw-sub); font-size: 12.5px; line-height: 1.5; }
+.sw-brief-date { font-size: 12px; color: var(--sw-sub); letter-spacing: .02em; font-variant-numeric: tabular-nums; }
+.sw-headline { font-size: clamp(17px, 2.1vw, 20px); font-weight: 600; line-height: 1.5; margin: 0; max-width: 60ch; text-wrap: balance; color: var(--sw-ink); padding-left: 14px; border-left: 3px solid var(--sw-red); }
+.sw-points { margin: 0; padding-left: 1.05em; display: flex; flex-direction: column; gap: 6px; max-width: 70ch; line-height: 1.6; }
+.sw-points li::marker { color: var(--sw-red); }
+.sw-brief-cols, .sw-week-body { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: 18px 28px; }
+.sw-brief-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; background: var(--sw-paper); border: 1px solid var(--sw-line); border-top: 4px solid var(--sw-ink); border-radius: 4px; padding: 20px 22px; box-shadow: 0 10px 24px -18px rgba(22,19,20,.35); }
+.sw-brief-col[data-src="디시 연뮤갤"] { border-top-color: var(--sw-red); }
+.sw-brief-src { font-family: var(--sw-display); font-weight: 800; font-size: 22px; color: var(--sw-ink); }
+.sw-brief-col[data-src="디시 연뮤갤"] .sw-brief-src { color: var(--sw-red); }
+.sw-brief-lead { margin: 0; line-height: 1.6; color: #3a3434; }
+.sw-brief-topic { align-self: flex-start; margin: 6px 0 0; font-size: 12px; font-weight: 700; color: #fff; background: var(--sw-red-deep); padding: 3px 10px; border-radius: 999px; }
+.sw-src-tag { display: inline-block; font-size: 11px; padding: 0 6px; border-radius: 3px; border: 1px solid var(--sw-line); color: var(--sw-sub); white-space: nowrap; line-height: 1.6; }
+.sw-chan { margin-right: 6px; vertical-align: 1px; }
+.sw-week-stats { display: flex; flex-wrap: wrap; gap: 8px 32px; padding: 12px 0; border-block: 1px solid var(--sw-line); }
+.sw-week-stats > div { display: flex; flex-direction: column; gap: 2px; }
+.sw-week-num { font-family: var(--sw-display); font-weight: 700; font-size: 26px; font-variant-numeric: tabular-nums; color: var(--sw-ink); }
+.sw-week-group { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.sw-week-group.sw-watch { background: #f7f3ef; border: 1px dashed #cfc5bd; border-radius: 4px; padding: 14px 16px; }
+.sw-week-group.sw-watch .sw-brief-topic { background: var(--sw-ink); }
+.sw-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); gap: 12px; }
+.sw-kpi { background: var(--sw-paper); border: 1px solid var(--sw-line); border-top: 3px solid var(--sw-ink); border-radius: 4px; padding: 14px 18px; display: flex; flex-direction: column; gap: 4px; }
+.sw-kpi:first-child { border-top-color: var(--sw-red); }
+.sw-kpi-label { font-size: 12px; color: var(--sw-sub); }
+.sw-kpi-val { font-family: var(--sw-display); font-weight: 700; font-size: clamp(22px, 3vw, 28px); font-variant-numeric: tabular-nums; line-height: 1.2; color: var(--sw-ink); overflow-wrap: anywhere; }
+.sw-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: 18px; }
+.sw-bars { display: flex; flex-direction: column; gap: 6px; min-height: 9rem; position: relative; }
+.sw-bar { display: grid; grid-template-columns: 5.2rem 1fr 2.2rem; align-items: center; gap: 10px; font: inherit; font-size: 13px; background: none; border: 0; padding: 3px 0; color: var(--sw-ink); cursor: pointer; text-align: left; }
+.sw-bar-track { height: 14px; border-radius: 2px; background: #f1ece8; overflow: hidden; display: flex; }
+.sw-bar-fill { height: 100%; }
+.sw-bar-n { text-align: right; font-variant-numeric: tabular-nums; color: var(--sw-sub); }
+.sw-bar[aria-pressed="true"] .sw-bar-label { font-weight: 700; color: var(--sw-red); }
+.sw-bars.sw-has-pick .sw-bar[aria-pressed="false"] { opacity: .4; }
+.sw-legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--sw-sub); }
+.sw-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.sw-tip { position: absolute; pointer-events: none; background: var(--sw-night); color: #f4f0ec; border-radius: 3px; box-shadow: 0 8px 20px -8px rgba(0,0,0,.5); padding: 6px 10px; font-size: 12px; white-space: nowrap; z-index: 2; }
+.sw-tip b { font-weight: 700; }
+.sw-tip span { color: #c9c0bb; }
+.sw-daily { position: relative; min-height: 180px; }
+.sw-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.sw-search { font: inherit; font-size: 13px; padding: 8px 12px; border-radius: 3px; border: 1px solid var(--sw-line); background: #fbf9f7; color: var(--sw-ink); min-width: 0; flex: 1 1 12rem; }
+.sw-sel { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--sw-sub); }
+.sw-sel select { font: inherit; font-size: 13px; color: var(--sw-ink); padding: 7px 28px 7px 10px; border: 1px solid var(--sw-line); border-radius: 3px; background: #fbf9f7; max-width: 11rem; }
+.sw-picked { font: inherit; font-size: 12.5px; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--sw-red); color: var(--sw-red); background: none; cursor: pointer; }
+.sw-tablewrap { overflow: auto; max-height: 36rem; border-top: 2px solid var(--sw-ink); }
+.sw-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.sw-table th { position: sticky; top: 0; background: var(--sw-paper); text-align: left; font-weight: 700; color: var(--sw-sub); padding: 8px; border-bottom: 1px solid var(--sw-line); white-space: nowrap; font-size: 12px; }
+.sw-table td { padding: 9px 8px; border-bottom: 1px solid var(--sw-line); vertical-align: top; line-height: 1.5; }
+.sw-table tr:hover td { background: #fbf8f5; }
+.sw-table td.sw-num { text-align: right; font-variant-numeric: tabular-nums; }
+.sw-table td.sw-time { white-space: nowrap; color: var(--sw-sub); font-variant-numeric: tabular-nums; }
+.sw-table a { color: var(--sw-ink); font-weight: 600; text-decoration: underline; text-decoration-color: var(--sw-line); text-underline-offset: 3px; }
+.sw-table a:hover { text-decoration-color: var(--sw-red); color: var(--sw-red); }
+.sw-sent { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11.5px; border: 1px solid currentColor; white-space: nowrap; }
+.sw-sent[data-s="긍정"] { color: var(--sw-ink); }
+.sw-sent[data-s="부정"] { color: #fff; background: var(--sw-red); border-color: var(--sw-red); }
+.sw-sent[data-s="중립"] { color: #8f8885; }
+.sw-empty { color: var(--sw-sub); padding: 12px 0; }
+.sw-fail { display: flex; align-items: center; justify-content: center; gap: 6px; color: var(--sw-sub); font-size: 12px; min-height: 6rem; }
+.sw-fail::before { content: ""; width: .375rem; height: .375rem; border-radius: 50%; background: var(--sw-red); }
+.sw-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding-block: 18px 26px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); max-width: 1180px; margin-inline: auto; width: 100%; box-sizing: border-box; color: var(--sw-sub); font-size: 12px; }
+.sw-foot-logo { width: 140px; aspect-ratio: 1105 / 226; max-width: 100%; }
+.sw-quiet { background: rgba(255,255,255,.72); box-shadow: none; padding: 16px 18px; gap: 8px; }
+.sw-quiet h2 { font-size: 16px; color: var(--sw-ink); }
+.sw-quiet .sw-bar { font-size: 12px; padding: 1px 0; }
+.sw-quiet .sw-bar-track { height: 9px; }
+.sw-quiet .sw-bars { min-height: 6rem; }
+.sw-quiet-label { font-size: 12px; color: var(--sw-sub); letter-spacing: .02em; margin-top: 6px; }
+.sw-contents { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); gap: 14px; }
+.sw-ct { background: var(--sw-paper); border: 1px solid var(--sw-line); border-radius: 4px; padding: 18px 20px; display: flex; flex-direction: column; gap: 10px; min-width: 0; box-shadow: 0 10px 24px -18px rgba(22,19,20,.35); }
+.sw-ct[data-tone="부정"] { border-left: 4px solid var(--sw-red); }
+.sw-ct-top { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 12px; color: var(--sw-sub); font-variant-numeric: tabular-nums; }
+.sw-ct-kind { font-weight: 700; color: #fff; background: var(--sw-ink); padding: 2px 9px; border-radius: 999px; }
+.sw-ct-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+.sw-ct h3 { margin: 0; font-size: 18px; font-weight: 700; line-height: 1.35; }
+.sw-ct-link { font-size: 12.5px; font-weight: 600; color: var(--sw-red) !important; white-space: nowrap; text-decoration: none; border-bottom: 1px solid currentColor; }
+.sw-ct-top-post { font-size: 12.5px; color: var(--sw-sub); margin: 0; }
+.sw-ct-stats { display: flex; flex-wrap: wrap; gap: 4px 18px; padding: 8px 0; border-block: 1px solid var(--sw-line); }
+.sw-ct-stats div { display: flex; flex-direction: column; }
+.sw-ct-stats b { font-family: var(--sw-display); font-weight: 700; font-size: 20px; font-variant-numeric: tabular-nums; }
+.sw-ct-stats span { font-size: 11.5px; color: var(--sw-sub); }
+.sw-ct-k { font-size: 12px; font-weight: 700; color: var(--sw-red); margin: 2px 0 0; }
+.sw-ct p { margin: 0; line-height: 1.6; font-size: 14px; }
+.sw-ct a { color: var(--sw-ink); font-size: 12.5px; font-weight: 600; text-underline-offset: 3px; }
+[data-dash-source-state=empty] { color: transparent; }
+[data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+@media (max-width: 640px) { .sw-hide-narrow { display: none; } .sw-card { padding: 18px 16px; }  }
+</style>
+
+<div class="sw">
+  <header class="sw-hero" id="top">
+    <div class="sw-hero-in">
+      <div class="sw-hero-row">
+        <div class="sw-hero-art" aria-hidden="true"></div>
+        <div class="sw-hero-id">
+          <div class="sw-hero-emblem" role="img" aria-label="10th Anniversary"></div>
+          <div class="sw-hero-logo" role="img" aria-label="스위니토드"></div>
+          <h1 class="sw-title">온라인 반응 트래커</h1>
+        </div>
+      </div>
+      <div class="sw-controls">
+        <div class="sw-seg" id="src-tabs" role="tablist" aria-label="출처 선택"></div>
+        <div class="sw-chips" id="day-chips" role="group" aria-label="날짜 선택" data-source="posts"></div>
+      </div>
+    </div>
+  </header>
+  <main class="sw-main">
+  <section class="sw-block" id="briefing" data-source="briefing">
+    <div class="sw-card">
+      <div class="sw-sec-head"><div class="sw-sec-title"><span class="sw-eyebrow">Daily Briefing</span><h2>오늘의 브리핑</h2></div></div>
+      <span class="sw-brief-date" id="brief-date"></span>
+      <p class="sw-headline dash-skeleton" id="brief-headline">—</p>
+    </div>
+    <div class="sw-brief-cols" id="brief-cols"></div>
+  </section>
+
+
+  <section class="sw-card" id="weekly" data-source="weekly">
+    <div class="sw-sec-head"><div class="sw-sec-title"><span class="sw-eyebrow">Weekly Report</span><h2>주간 요약</h2></div><div class="sw-chips" id="week-chips" role="group" aria-label="주차 선택"></div></div>
+    <span class="sw-brief-date" id="week-meta"></span>
+    <div class="sw-week-stats" id="week-stats">
+      <div><span class="sw-kpi-label">연뮤갤 글 수</span><span class="sw-week-num" id="w-dc">—</span></div>
+      <div><span class="sw-kpi-label">X 글 수</span><span class="sw-week-num" id="w-x">—</span></div>
+      <div><span class="sw-kpi-label">부정 비율</span><span class="sw-week-num" id="w-neg">—</span></div>
+    </div>
+    <p class="sw-headline dash-skeleton" id="week-headline">—</p>
+    <div class="sw-week-body" id="week-body"></div>
+  </section>
+
+  <section class="sw-block" id="contents">
+    <div class="sw-sec-head"><div class="sw-sec-title"><span class="sw-eyebrow">Content Reactions · Instagram</span><h2>콘텐츠<small>별 반응</small></h2></div><span class="sw-note">@od_musical 게시물 기준 · 최신순</span></div>
+    <div class="sw-contents" id="content-cards" data-source="contents"></div>
+  </section>
+
+  <section class="sw-kpis" id="kpis">
+    <div class="sw-kpi"><span class="sw-kpi-label">수집된 글</span><span class="sw-kpi-val dash-skeleton" id="k-posts" data-source="summary" data-field="posts" data-where="src=all&amp;day=all">—</span></div>
+    <div class="sw-kpi"><span class="sw-kpi-label">부정 반응 비율</span><span class="sw-kpi-val dash-skeleton" id="k-neg" data-source="summary" data-field="neg_share" data-where="src=all&amp;day=all">—</span></div>
+    <div class="sw-kpi"><span class="sw-kpi-label">최다 언급 배우</span><span class="sw-kpi-val dash-skeleton" id="k-actor" data-source="summary" data-field="top_actor" data-where="src=all&amp;day=all">—</span></div>
+    <div class="sw-kpi"><span class="sw-kpi-label">가장 많은 주제</span><span class="sw-kpi-val dash-skeleton" id="k-topic" data-source="summary" data-field="top_topic" data-where="src=all&amp;day=all">—</span></div>
+  </section>
+
+
+
+  <section class="sw-card" id="feed">
+    <div class="sw-sec-head"><div class="sw-sec-title"><span class="sw-eyebrow">All Posts</span><h2>글 목록</h2></div></div>
+    <div class="sw-filters">
+      <label class="sw-sel"><span>배우</span><select id="f-actor"></select></label>
+      <label class="sw-sel"><span>주제</span><select id="f-topic"></select></label>
+      <label class="sw-sel"><span>플랫폼</span><select id="f-src"></select></label>
+      <input class="sw-search" id="q" type="search" placeholder="제목·요약 검색" aria-label="글 검색">
+      <button class="sw-picked" id="picked" hidden>필터 초기화 ×</button>
+    </div>
+    <div class="sw-tablewrap">
+      <table class="sw-table" id="post-table" data-source="posts" data-row-key="no">
+        <thead><tr>
+          <th data-field="source">출처</th>
+          <th data-field="date">작성</th>
+          <th data-field="title">제목</th>
+          <th data-field="summary" class="sw-hide-narrow">요약</th>
+          <th data-field="actors">배우</th>
+          <th data-field="topic" class="sw-hide-narrow">주제</th>
+          <th data-field="sentiment">반응</th>
+          <th data-field="views" class="sw-hide-narrow">조회</th>
+        </tr></thead>
+        <tbody id="post-rows"></tbody>
+      </table>
+    </div>
+    <p class="sw-note" id="feed-count"></p>
+  </section>
+
+  <p class="sw-quiet-label">참고 지표</p>
+  <div class="sw-grid">
+    <section class="sw-card sw-quiet" id="actors">
+      <div class="sw-sec-head"><div class="sw-sec-title"><span class="sw-eyebrow">By Cast</span><h2>배우별 언급</h2></div></div>
+      <p class="sw-note">별칭(조, 요정, 집, 거상, 크리 등)과 페어 합성어까지 포함. 누르면 아래 글 목록이 그 배우로 좁혀집니다.</p>
+      <div class="sw-bars" id="actor-bars" data-source="actor_counts"></div>
+      <div class="sw-legend"><span><i style="background: var(--sw-red)"></i>부정</span><span><i style="background: var(--sw-mute)"></i>중립·긍정</span></div>
+    </section>
+    <section class="sw-card sw-quiet" id="topics">
+      <div class="sw-sec-head"><div class="sw-sec-title"><span class="sw-eyebrow">By Topic</span><h2>주제별 분포</h2></div></div>
+      <p class="sw-note">글 하나에 주제 하나. 누르면 해당 주제 글만 봅니다.</p>
+      <div class="sw-bars" id="topic-bars" data-source="topic_counts"></div>
+      <div class="sw-legend"><span><i style="background: var(--sw-red)"></i>부정</span><span><i style="background: var(--sw-mute)"></i>중립·긍정</span></div>
+    </section>
+  </div>
+
+  <section class="sw-card sw-quiet" id="daily">
+    <div class="sw-sec-head"><div class="sw-sec-title"><span class="sw-eyebrow">Timeline</span><h2>날짜별 글 수와 반응</h2></div></div>
+    <p class="sw-note">글 작성일 기준, 반응 톤별로 쌓았습니다.</p>
+    <div class="sw-daily" id="daily-chart" data-source="posts"></div>
+    <div class="sw-legend" id="daily-legend"></div>
+  </section>
+  </main>
+  <footer class="sw-foot"><span>출처: 디시인사이드 연극·뮤지컬 갤러리, X 검색 · 분류와 요약은 Claude가 작성</span><div class="sw-foot-logo" role="img" aria-label="OD Company"></div></footer>
+</div>
+
+<script>
+const split = (s) => (s || '').split(',').map((x) => x.trim()).filter(Boolean);
+window.swSplit = split;
+
+dash.calc('summary', {
+  title: '기간·출처별 요약',
+  description: '출처(전체/디시 연뮤갤/X)와 날짜(전체/일별)마다 글 수, 부정 비율, 최다 언급 배우와 주제',
+  inputs: ['posts'],
+  fn: (posts) => {
+    const srcs = ['all', ...new Set(posts.map((p) => p.source))];
+    const days = ['all', ...new Set(posts.map((p) => p.day))];
+    const out = [];
+    srcs.forEach((src) => days.forEach((day) => {
+      const rows = posts.filter((p) => (src === 'all' || p.source === src) && (day === 'all' || p.day === day));
+      const neg = rows.filter((p) => p.sentiment === '부정').length;
+      const ac = {}, tc = {};
+      rows.forEach((p) => { p.actors.split(',').map((x) => x.trim()).filter(Boolean).forEach((a) => { ac[a] = (ac[a] || 0) + 1; }); tc[p.topic] = (tc[p.topic] || 0) + 1; });
+      const top = (o) => Object.entries(o).sort((a, b) => b[1] - a[1])[0]?.[0] || '';
+      out.push({ src, day, posts: rows.length, neg_share: rows.length ? Math.round(neg / rows.length * 100) + '%' : '0%', top_actor: top(ac), top_topic: top(tc) });
+    }));
+    return out;
+  },
+});
+
+dash.calc('actor_counts', {
+  title: '배우별 언급 수',
+  description: '출처·날짜별 배우 언급 글 수와 그중 부정 글 수',
+  inputs: ['posts'],
+  fn: (posts) => {
+    const out = {};
+    posts.forEach((p) => p.actors.split(',').map((x) => x.trim()).filter(Boolean).forEach((a) => {
+      ['all', p.source].forEach((src) => ['all', p.day].forEach((day) => {
+        const k = src + '|' + day + '|' + a; out[k] = out[k] || { src, day, actor: a, n: 0, neg: 0 }; out[k].n++; if (p.sentiment === '부정') out[k].neg++;
+      }));
+    }));
+    return Object.values(out);
+  },
+});
+
+dash.calc('topic_counts', {
+  title: '주제별 글 수',
+  description: '출처·날짜별 주제별 글 수와 그중 부정 글 수',
+  inputs: ['posts'],
+  fn: (posts) => {
+    const out = {};
+    posts.forEach((p) => ['all', p.source].forEach((src) => ['all', p.day].forEach((day) => {
+      const k = src + '|' + day + '|' + p.topic; out[k] = out[k] || { src, day, topic: p.topic, n: 0, neg: 0 }; out[k].n++; if (p.sentiment === '부정') out[k].neg++;
+    })));
+    return Object.values(out);
+  },
+});
+dash.calc('week_stats', {
+  title: '주간 글 수',
+  description: '주(월요일 시작)·출처별 글 수와 부정 비율',
+  inputs: ['posts'],
+  fn: (posts) => {
+    const monday = (day) => { const d = new Date(day + 'T00:00:00Z'); const k = (d.getUTCDay() + 6) % 7; d.setUTCDate(d.getUTCDate() - k); return d.toISOString().slice(0, 10); };
+    const out = {};
+    posts.forEach((p) => ['all', p.source].forEach((src) => {
+      const k = monday(p.day) + '|' + src; out[k] = out[k] || { week_start: monday(p.day), src, posts: 0, neg: 0 }; out[k].posts++; if (p.sentiment === '부정') out[k].neg++;
+    }));
+    return Object.values(out).map((r) => ({ week_start: r.week_start, src: r.src, posts: r.posts, neg_share: Math.round(r.neg / r.posts * 100) + '%' }));
+  },
+});
+</script>
+
+<script>
+(() => {
+  const split = window.swSplit;
+  const $ = (id) => document.getElementById(id);
+  const tip = document.createElement('div');
+  tip.className = 'sw-tip'; tip.hidden = true;
+  const showTip = (box, html, x, y) => {
+    if (tip.parentNode !== box) box.appendChild(tip);
+    tip.replaceChildren(...html); tip.hidden = false;
+    const bw = box.clientWidth, tw = tip.offsetWidth;
+    tip.style.left = Math.max(0, Math.min(bw - tw, x - tw / 2)) + 'px';
+    tip.style.top = Math.max(0, y - tip.offsetHeight - 8) + 'px';
+  };
+  const hideTip = () => { tip.hidden = true; };
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const fail = (box) => { box.replaceChildren(el('div', 'sw-fail', '불러오지 못했습니다')); };
+  const dayLabel = (d) => d === 'all' ? '전체' : d.slice(5).replace('-', '/');
+
+  $('q').addEventListener('input', () => draw());
+  $('picked').addEventListener('click', () => dash.setParams({ actor: null, topic: null, src: 'all' }));
+  $('f-actor').addEventListener('change', (e) => dash.setParams({ actor: e.target.value || null }));
+  $('f-topic').addEventListener('change', (e) => dash.setParams({ topic: e.target.value || null }));
+  $('f-src').addEventListener('change', (e) => dash.setParams({ src: e.target.value || 'all', actor: null, topic: null }));
+
+  const drawBars = (box, rows, key, picked, param) => {
+    const max = d3.max(rows, (r) => r.n) || 1;
+    box.classList.toggle('sw-has-pick', !!picked);
+    box.replaceChildren(...rows.map((r) => {
+      const b = el('button', 'sw-bar');
+      b.setAttribute('aria-pressed', String(picked === r[key]));
+      const track = el('span', 'sw-bar-track');
+      const neg = el('span', 'sw-bar-fill'); neg.style.width = (r.neg / max * 100) + '%'; neg.style.background = 'var(--sw-red)';
+      const rest = el('span', 'sw-bar-fill'); rest.style.width = ((r.n - r.neg) / max * 100) + '%'; rest.style.background = 'var(--sw-mute)';
+      track.append(neg, rest);
+      b.append(el('span', 'sw-bar-label', r[key]), track, el('span', 'sw-bar-n', String(r.n)));
+      b.addEventListener('click', () => dash.setParams({ [param]: picked === r[key] ? null : r[key] }));
+      b.addEventListener('mousemove', (ev) => {
+        const rect = box.getBoundingClientRect();
+        const h = el('b', null, r[key]); const s = el('span', null, ` · ${r.n}건 중 부정 ${r.neg}건`);
+        showTip(box, [h, s], ev.clientX - rect.left, ev.clientY - rect.top);
+      });
+      b.addEventListener('mouseleave', hideTip);
+      return b;
+    }));
+    if (!rows.length) box.replaceChildren(el('div', 'sw-empty', '이 날짜에는 언급이 없습니다'));
+  };
+
+  const drawDaily = (box, posts, activeDay) => {
+    const tones = [['부정', 'var(--sw-red)'], ['중립', 'var(--sw-mute)'], ['긍정', 'var(--sw-ink)']];
+    const days = Array.from(new Set(posts.map((p) => p.day))).sort();
+    const data = days.map((d) => { const o = { day: d }; tones.forEach(([t]) => { o[t] = posts.filter((p) => p.day === d && p.sentiment === t).length; }); o.total = tones.reduce((s, [t]) => s + o[t], 0); return o; });
+    const W = Math.max(280, box.clientWidth), H = 180, m = { t: 12, r: 8, b: 26, l: 30 };
+    const x = d3.scaleBand(days, [m.l, W - m.r]).padding(0.35);
+    const y = d3.scaleLinear([0, d3.max(data, (d) => d.total) || 1], [H - m.b, m.t]).nice();
+    const svg = d3.create('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', '날짜별 글 수');
+    svg.append('g').selectAll('line').data(y.ticks(4)).join('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', (d) => y(d)).attr('y2', (d) => y(d)).attr('stroke', 'var(--sw-line)');
+    svg.append('g').selectAll('text').data(y.ticks(4)).join('text').attr('x', m.l - 6).attr('y', (d) => y(d)).attr('dy', '0.32em').attr('text-anchor', 'end').attr('fill', 'var(--sw-sub)').style('font-size', '12px').text((d) => d);
+    const stack = d3.stack().keys(tones.map(([t]) => t))(data);
+    stack.forEach((layer, i) => {
+      svg.append('g').selectAll('rect').data(layer).join('rect')
+        .attr('x', (d) => x(d.data.day)).attr('width', Math.min(48, x.bandwidth()))
+        .attr('y', (d) => y(d[1])).attr('height', (d) => Math.max(0, y(d[0]) - y(d[1])))
+        .attr('fill', tones[i][1]).attr('opacity', (d) => activeDay === 'all' || activeDay === d.data.day ? 1 : 0.35)
+        .on('mousemove', (ev, d) => {
+          const rect = box.getBoundingClientRect();
+          showTip(box, [el('span', null, dayLabel(d.data.day) + '  '), el('b', null, `${d.data.total}건`), el('span', null, ` · 부정 ${d.data['부정']} · 중립 ${d.data['중립']} · 긍정 ${d.data['긍정']}`)], ev.clientX - rect.left, ev.clientY - rect.top);
+        })
+        .on('mouseleave', hideTip)
+        .on('click', (ev, d) => dash.setParams({ day: d.data.day }));
+    });
+    svg.append('g').selectAll('text').data(days).join('text').attr('x', (d) => x(d) + Math.min(48, x.bandwidth()) / 2).attr('y', H - 8).attr('text-anchor', 'middle').attr('fill', 'var(--sw-sub)').style('font-size', '12px').text(dayLabel);
+    box.replaceChildren(svg.node());
+    $('daily-legend').replaceChildren(...tones.map(([t, c]) => { const s = el('span'); const i = el('i'); i.style.background = c; s.append(i, t); return s; }));
+  };
+
+  const draw = () => {
+    const P = dash.data('posts'), B = dash.data('briefing'), S = dash.data('summary'), A = dash.data('actor_counts'), T = dash.data('topic_counts');
+    const { day = 'all', actor = null, topic = null, src = 'all' } = dash.params();
+    const inSrc = (p) => src === 'all' || p.source === src;
+    const SRCS = [['all', '전체'], ['디시 연뮤갤', '연뮤갤'], ['X', 'X']];
+    const tabs = $('src-tabs');
+    tabs.replaceChildren(...SRCS.map(([k, label]) => { const b = el('button', null, label); b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', String(k === src)); if (P.status === 'ok') { const n = P.data.filter((p) => k === 'all' || p.source === k).length; b.append(el('small', null, String(n))); } b.addEventListener('click', () => dash.setParams({ src: k, actor: null, topic: null })); return b; }));
+
+    // date chips
+    const chips = $('day-chips');
+    if (P.status === 'ok') {
+      const days = ['all', ...Array.from(new Set(P.data.filter(inSrc).map((p) => p.day))).sort().reverse()];
+      chips.replaceChildren(...days.map((d) => { const c = el('button', 'sw-chip', dayLabel(d)); c.setAttribute('aria-pressed', String(d === day)); c.addEventListener('click', () => dash.setParams({ day: d })); return c; }));
+    }
+
+    // briefing: latest date
+    const bh = $('brief-headline'), cols = $('brief-cols');
+    if (B.status === 'ok' && B.data.length) {
+      const latest = d3.max(B.data, (r) => r.date);
+      const rows = B.data.filter((r) => r.date === latest).sort((a, b) => a.order - b.order);
+      const head = rows.find((r) => r.type === 'headline');
+      $('brief-date').textContent = `${latest.slice(5).replace('-', '/')} 기준 · ${head?.scope || rows[0]?.scope || ''}`;
+      bh.classList.remove('dash-skeleton'); bh.textContent = head ? head.text : '—';
+      const show = SRCS.slice(1).filter(([k]) => src === 'all' || src === k);
+      cols.replaceChildren(...show.map(([k, label]) => {
+        const col = el('div', 'sw-brief-col'); col.dataset.src = k;
+        col.append(el('span', 'sw-brief-src', label === '연뮤갤' ? '연뮤갤 (디시)' : 'X'));
+        const mine = rows.filter((r) => r.source === k);
+        const lead = mine.find((r) => r.type === 'lead');
+        if (lead) col.append(el('p', 'sw-brief-lead', lead.text));
+        const groups = d3.groups(mine.filter((r) => r.type === 'point'), (r) => r.topic || '기타');
+        groups.forEach(([t, pts]) => { col.append(el('p', 'sw-brief-topic', t)); const ul = el('ul', 'sw-points'); pts.forEach((r) => ul.append(el('li', null, r.text))); col.append(ul); });
+        if (!mine.length) col.append(el('p', 'sw-note', '오늘은 이 출처의 브리핑이 없습니다'));
+        return col;
+      }));
+    } else if (B.status === 'error') { bh.classList.remove('dash-skeleton'); bh.textContent = '—'; cols.replaceChildren(el('div', 'sw-fail', '불러오지 못했습니다')); }
+
+    // weekly
+    const Wk = dash.data('weekly'), WS = dash.data('week_stats');
+    if (Wk.status === 'ok' && Wk.data.length) {
+      const weeks = Array.from(d3.group(Wk.data, (r) => r.week_start)).sort((a, b) => b[0].localeCompare(a[0]));
+      const cur = dash.params().week && weeks.find(([w]) => w === dash.params().week) ? dash.params().week : weeks[0][0];
+      $('week-chips').replaceChildren(...weeks.map(([w, rs]) => { const c = el('button', 'sw-chip', rs[0].label); c.setAttribute('aria-pressed', String(w === cur)); c.addEventListener('click', () => dash.setParams({ week: w })); return c; }));
+      const wr = weeks.find(([w]) => w === cur)[1].slice().sort((a, b) => a.order - b.order);
+      $('week-meta').textContent = `${wr[0].label} · ${wr[0].range} · ${wr[0].status}`;
+      const wh = $('week-headline'); wh.classList.remove('dash-skeleton'); wh.textContent = wr.find((r) => r.type === 'headline')?.text || '—';
+      const groups = d3.groups(wr.filter((r) => r.type !== 'headline'), (r) => r.topic);
+      $('week-body').replaceChildren(...groups.map(([t, pts]) => {
+        const g = el('div', 'sw-week-group' + (pts[0].type === 'watch' ? ' sw-watch' : ''));
+        g.append(el('p', 'sw-brief-topic', t));
+        const ul = el('ul', 'sw-points');
+        pts.forEach((r) => { const li = el('li'); if (r.type !== 'watch') li.append(el('span', 'sw-src-tag sw-chan', r.channel)); li.append(r.text); ul.append(li); });
+        g.append(ul); return g;
+      }));
+      [['w-dc', '디시 연뮤갤', 'posts'], ['w-x', 'X', 'posts'], ['w-neg', 'all', 'neg_share']].forEach(([id, sname, f]) => {
+        const e = $(id); e.dataset.source = 'week_stats'; e.dataset.field = f; e.dataset.where = 'week_start=' + cur + '&src=' + encodeURIComponent(sname);
+        if (WS.status === 'ok') { const r = WS.data.find((x) => x.week_start === cur && x.src === sname); e.textContent = r ? String(r[f]) : '—'; }
+      });
+    } else if (Wk.status === 'error') { $('week-headline').classList.remove('dash-skeleton'); $('week-body').replaceChildren(el('div', 'sw-fail', '불러오지 못했습니다')); }
+
+    // contents
+    const C = dash.data('contents'), cbox = $('content-cards');
+    if (C.status === 'ok') {
+      const fmt = (n) => n >= 10000 ? (n / 10000).toFixed(1).replace('.0', '') + '만' : n >= 1000 ? (n / 1000).toFixed(1).replace('.0', '') + '천' : String(n);
+      const rows = C.data.slice().sort((a, b) => b.date.localeCompare(a.date) || a.order - b.order);
+      cbox.replaceChildren(...rows.map((r) => {
+        const c = el('article', 'sw-ct'); c.dataset.tone = r.tone;
+        const top = el('div', 'sw-ct-top'); top.append(el('span', 'sw-ct-kind', r.kind), el('span', null, r.date.slice(5).replace('-', '/') + ' 게시'));
+        const tone = el('span', 'sw-sent', r.tone === '혼재' ? '중립' : r.tone); tone.dataset.s = r.tone === '혼재' ? '중립' : r.tone; top.append(tone);
+        const st = el('div', 'sw-ct-stats');
+        [[r.posts + '건', '게시물'], [fmt(r.likes), '좋아요 합계'], [fmt(r.comments), '댓글 합계']].forEach(([v, l]) => { const d = el('div'); d.append(el('b', null, v), el('span', null, l)); st.append(d); });
+        const head = el('div', 'sw-ct-head'); const a = el('a', 'sw-ct-link', '게시물 보기 ↗'); a.href = r.top_url; a.target = '_blank'; a.rel = 'noopener';
+        head.append(el('h3', null, r.name), a);
+        c.append(top, head, st, el('p', 'sw-ct-top-post', `반응 최다: ${r.top_label} · 좋아요 ${fmt(r.top_likes)} · 댓글 ${fmt(r.top_comments)}`), el('p', 'sw-ct-k', '주요 반응'), el('p', null, r.reaction), el('p', 'sw-ct-k', '확산 양상'), el('p', null, r.spread));
+        return c;
+      }));
+    } else if (C.status === 'error') cbox.replaceChildren(el('div', 'sw-fail', '불러오지 못했습니다'));
+
+    // KPIs
+    const kmap = [['k-posts', 'posts'], ['k-neg', 'neg_share'], ['k-actor', 'top_actor'], ['k-topic', 'top_topic']];
+    kmap.forEach(([id, f]) => {
+      const e = $(id); e.dataset.where = 'src=' + encodeURIComponent(src) + '&day=' + encodeURIComponent(day);
+      if (S.status === 'ok') { const r = S.data.find((x) => x.day === day && x.src === src) || {}; e.classList.remove('dash-skeleton'); e.textContent = r[f] != null && r[f] !== '' ? String(r[f]) : '—'; }
+      else if (S.status === 'error') { e.classList.remove('dash-skeleton'); e.textContent = '—'; }
+    });
+
+    // bars
+    if (A.status === 'ok') drawBars($('actor-bars'), A.data.filter((r) => r.day === day && r.src === src).sort((a, b) => b.n - a.n), 'actor', actor, 'actor');
+    else if (A.status === 'error') fail($('actor-bars'));
+    if (T.status === 'ok') drawBars($('topic-bars'), T.data.filter((r) => r.day === day && r.src === src).sort((a, b) => b.n - a.n), 'topic', topic, 'topic');
+    else if (T.status === 'error') fail($('topic-bars'));
+
+    // daily
+    if (P.status === 'ok') drawDaily($('daily-chart'), P.data.filter(inSrc), day);
+    else if (P.status === 'error') fail($('daily-chart'));
+
+    // table
+    const picked = $('picked');
+    picked.hidden = !(actor || topic || src !== 'all');
+    if (P.status === 'ok') {
+      const fill = (sel, opts, cur, allLabel) => { sel.replaceChildren(new Option(allLabel, ''), ...opts.map(([v, l]) => new Option(l, v))); sel.value = cur || ''; };
+      const base = P.data.filter(inSrc);
+      const cnt = (fn) => { const m = new Map(); base.forEach((p) => fn(p).forEach((k) => m.set(k, (m.get(k) || 0) + 1))); return Array.from(m).sort((a, b) => b[1] - a[1]); };
+      fill($('f-actor'), cnt((p) => split(p.actors)).map(([k, n]) => [k, `${k} (${n})`]), actor, '전체 배우');
+      fill($('f-topic'), cnt((p) => [p.topic]).map(([k, n]) => [k, `${k} (${n})`]), topic, '전체 주제');
+      fill($('f-src'), [['디시 연뮤갤', '연뮤갤'], ['X', 'X']], src === 'all' ? '' : src, '전체 플랫폼');
+    }
+    const tb = $('post-rows');
+    if (P.status === 'ok') {
+      const q = $('q').value.trim();
+      const rows = P.data.filter((p) => inSrc(p) && (day === 'all' || p.day === day) && (!actor || split(p.actors).includes(actor)) && (!topic || p.topic === topic) && (!q || (p.title + p.summary + p.actors).includes(q)))
+        .sort((a, b) => b.date.localeCompare(a.date));
+      tb.replaceChildren(...rows.map((p) => {
+        const tr = el('tr'); tr.dataset.key = p.no;
+        const a = el('a', null, p.title); a.href = p.url; a.target = '_blank'; a.rel = 'noopener';
+        const tdT = el('td'); tdT.append(a);
+        const s = el('span', 'sw-sent', p.sentiment); s.dataset.s = p.sentiment;
+        const tdS = el('td'); tdS.append(s);
+        const tdSrc = el('td'); tdSrc.append(el('span', 'sw-src-tag', p.source));
+        tr.append(tdSrc, el('td', 'sw-time', p.date), tdT, el('td', 'sw-hide-narrow', p.summary), el('td', null, p.actors), el('td', 'sw-hide-narrow', p.topic), tdS, el('td', 'sw-num sw-hide-narrow', String(p.views)));
+        return tr;
+      }));
+      $('feed-count').textContent = `${rows.length}건 표시 · 제목을 누르면 원문이 열립니다`;
+      if (!rows.length) { const tr = el('tr'); const td = el('td', 'sw-empty', '조건에 맞는 글이 없습니다'); td.colSpan = 8; tr.append(td); tb.replaceChildren(tr); }
+    } else if (P.status === 'error') { const tr = el('tr'); const td = el('td', 'sw-fail', '불러오지 못했습니다'); td.colSpan = 8; tr.append(td); tb.replaceChildren(tr); }
+  };
+
+  dash.onData(draw);
+})();
+</script>
+
+</div>
+</body>
+</html>
