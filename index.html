@@ -437,10 +437,10 @@ dash.calc('week_stats', {
       chips.replaceChildren(...days.map((d) => { const c = el('button', 'sw-chip', dayLabel(d)); c.setAttribute('aria-pressed', String(d === day)); c.addEventListener('click', () => dash.setParams({ day: d })); return c; }));
     }
 
-    // briefing: latest date
+    // briefing: selected date, else latest
     const bh = $('brief-headline'), cols = $('brief-cols');
     if (B.status === 'ok' && B.data.length) {
-      const latest = d3.max(B.data, (r) => r.date);
+      const latest = (day !== 'all' && B.data.some((r) => r.date === day)) ? day : d3.max(B.data, (r) => r.date);
       const rows = B.data.filter((r) => r.date === latest).sort((a, b) => a.order - b.order);
       const head = rows.find((r) => r.type === 'headline');
       $('brief-date').textContent = `${latest.slice(5).replace('-', '/')} 기준 · ${head?.scope || rows[0]?.scope || ''}`;
