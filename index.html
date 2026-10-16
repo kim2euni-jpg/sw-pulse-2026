@@ -224,6 +224,7 @@ window.dash = (function () {
     <div class="sw-kpi"><span class="sw-kpi-label">부정 반응 비율</span><span class="sw-kpi-val dash-skeleton" id="k-neg" data-source="summary" data-field="neg_share" data-where="src=all&amp;day=all">—</span></div>
     <div class="sw-kpi"><span class="sw-kpi-label">최다 언급 배우</span><span class="sw-kpi-val dash-skeleton" id="k-actor" data-source="summary" data-field="top_actor" data-where="src=all&amp;day=all">—</span></div>
     <div class="sw-kpi"><span class="sw-kpi-label">가장 많은 주제</span><span class="sw-kpi-val dash-skeleton" id="k-topic" data-source="summary" data-field="top_topic" data-where="src=all&amp;day=all">—</span></div>
+    <div class="sw-kpi"><span class="sw-kpi-label">양도·구함 글 <small>(목록 제외, 건수만)</small></span><span class="sw-kpi-val dash-skeleton" id="k-trans" data-source="transfers" data-field="count">—</span></div>
   </section>
 
 
@@ -507,6 +508,10 @@ dash.calc('week_stats', {
       if (S.status === 'ok') { const r = S.data.find((x) => x.day === day && x.src === src) || {}; e.classList.remove('dash-skeleton'); e.textContent = r[f] != null && r[f] !== '' ? String(r[f]) : '—'; }
       else if (S.status === 'error') { e.classList.remove('dash-skeleton'); e.textContent = '—'; }
     });
+
+    const Tr = dash.data('transfers'), ke = $('k-trans');
+    if (Tr.status === 'ok') { const rs = Tr.data.filter((r) => (src === 'all' || r.source === src) && (day === 'all' || r.day === day)); ke.classList.remove('dash-skeleton'); ke.textContent = rs.length ? d3.sum(rs, (r) => r.count) + '건' : '—'; ke.title = rs.map((r) => r.note).filter(Boolean).join(' · '); }
+    else if (Tr.status === 'error' || Tr.status === 'missing') { ke.classList.remove('dash-skeleton'); ke.textContent = '—'; }
 
     // bars
     if (A.status === 'ok') drawBars($('actor-bars'), A.data.filter((r) => r.day === day && r.src === src).sort((a, b) => b.n - a.n), 'actor', actor, 'actor');
