@@ -58,6 +58,9 @@ window.dash = (function () {
 .sw-hero-id { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; min-width: 0; }
 .sw-hero-emblem { width: clamp(64px, 9vw, 96px); aspect-ratio: 1; }
 .sw-hero-logo { width: 100%; max-width: 460px; aspect-ratio: 560 / 170; }
+.sw-update { margin: 0; font-size: 13px; font-weight: 600; color: #3a3434; font-variant-numeric: tabular-nums; }
+.sw-update span::before { content: " · "; }
+.sw-update span:empty::before { content: none; }
 .sw-title { margin: 4px 0 0; font-family: var(--sw-display); font-weight: 800; font-size: clamp(24px, 3.2vw, 34px); letter-spacing: .02em; line-height: 1.1; color: var(--sw-ink); }
 .sw-hero-art { width: 100%; max-width: 480px; aspect-ratio: 620 / 575; }
 .sw-controls { display: flex; flex-direction: column; align-items: center; gap: 10px; }
@@ -183,6 +186,7 @@ window.dash = (function () {
           <div class="sw-hero-emblem" role="img" aria-label="10th Anniversary"></div>
           <div class="sw-hero-logo" role="img" aria-label="스위니토드"></div>
           <h1 class="sw-title">온라인 반응 트래커</h1>
+          <p class="sw-update">평일 12:00 · 17:00 자동 업데이트<span id="sw-last"></span></p>
         </div>
       </div>
       <div class="sw-controls">
@@ -509,6 +513,8 @@ dash.calc('week_stats', {
       else if (S.status === 'error') { e.classList.remove('dash-skeleton'); e.textContent = '—'; }
     });
 
+    const St = dash.data('status');
+    if (St.status === 'ok' && St.data.length) { const u = St.data[0].updated_at || ''; const d = new Date(u.slice(0, 10) + 'T00:00:00'); $('sw-last').textContent = u ? `마지막 업데이트 ${+u.slice(5, 7)}/${+u.slice(8, 10)}(${'일월화수목금토'[d.getDay()]}) ${u.slice(11, 16)}` : ''; }
     const Tr = dash.data('transfers'), ke = $('k-trans');
     if (Tr.status === 'ok') { const rs = Tr.data.filter((r) => (src === 'all' || r.source === src) && (day === 'all' || r.day === day)); ke.classList.remove('dash-skeleton'); ke.textContent = rs.length ? d3.sum(rs, (r) => r.count) + '건' : '—'; ke.title = rs.map((r) => r.note).filter(Boolean).join(' · '); }
     else if (Tr.status === 'error' || Tr.status === 'missing') { ke.classList.remove('dash-skeleton'); ke.textContent = '—'; }
